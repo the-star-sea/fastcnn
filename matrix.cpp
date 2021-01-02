@@ -28,7 +28,7 @@ inline void quickdot(const float *x, const float *y, long begin, long end, float
 #endif
 }
 
-void Relu(Matrix *matrix) {
+inline void Relu(Matrix *matrix) {
 #if defined(ARM)
     for (int k = 0; k < matrix->getChannel() * matrix->getSize() * matrix->getSize(); k++) {
         if (matrix->getData()[k] < 0)matrix->getData()[k] = 0;
@@ -46,12 +46,13 @@ void Relu(Matrix *matrix) {
 #endif
 }
 
-void maxpool(const Matrix *matrix1, int size, Matrix *ans) {
+inline void maxpool(const Matrix *matrix1, int size, Matrix *ans) {
 #if defined(ARM)
     int pl = 0;
-    for (int sj = 0; sj < matrix1->getSize(); sj += size) {
+    for (int c = 0; c < matrix1->getChannel(); c++)
+    {
         for (int si = 0; si < matrix1->getSize(); si += size) {
-            for (int c = 0; c < matrix1->getChannel(); c++) {
+            for (int sj = 0; sj < matrix1->getSize(); sj += size)     {
                 ans->getData()[pl] = 0;
                 for (int j = 0; j < size; j++) {
                     for (int i = 0; i < size; i++) {
@@ -67,14 +68,16 @@ void maxpool(const Matrix *matrix1, int size, Matrix *ans) {
 #elif defined(_ENABLE_AVX2)
     int pl=0;
 #pragma omp parallel for schedule(dynamic)
-    for(int sj=0;sj<matrix1->getSize();sj+=size)
+    for (int c = 0; c < matrix1->getChannel(); c++)
     {
-        for(int si=0;si<matrix1->getSize();si+=size){
-            for(int c=0;c<matrix1->getChannel();c++){
-                ans->getData()[pl]=0;
-                for(int j=0;j<size;j++){
-                    for(int i=0;i<size;i++){
-                        ans->getData()[pl]=max(ans->getData()[pl],matrix1->getData()[c*matrix1->getSize()*matrix1->getSize()+(si+i)*matrix1->getSize()+sj+j]);
+        for (int si = 0; si < matrix1->getSize(); si += size) {
+            for (int sj = 0; sj < matrix1->getSize(); sj += size)     {
+                ans->getData()[pl] = 0;
+                for (int j = 0; j < size; j++) {
+                    for (int i = 0; i < size; i++) {
+                        ans->getData()[pl] = max(ans->getData()[pl],
+                                                 matrix1->getData()[c * matrix1->getSize() * matrix1->getSize() +
+                                                                    (si + i) * matrix1->getSize() + sj + j]);
                     }
                 }
                 pl++;
@@ -84,30 +87,60 @@ void maxpool(const Matrix *matrix1, int size, Matrix *ans) {
 #endif
 
 }
+inline void addzero(Matrix *matrix,int padding){
 
-void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias) {
+    float *data=new float[(matrix->getSize()+padding*2)*(matrix->getSize()+padding*2)*matrix->getChannel()];
+   int pl=0;
+for(int i=0;i<matrix->getSize()+2*padding;i++){
+    data[pl++]=0;
+}
+    for(int i=0;i<matrix->getChannel();i++)
+    {for(int j=0;j<padding;j++){
+        data[pl++]=0;
+
+    }
+        for(int j=0;j<matrix->getSize();j++){
+            for(int k=0;k<matrix->getSize();k++) {
+              data[pl++] =matrix->getData()[i*matrix->getSize()*matrix->getSize()+j*matrix->getSize()+k];
+
+            }
+
+    }for(int j=0;j<padding;j++){
+            data[pl++]=0;
+
+
+        }}
+    for(int i=0;i<matrix->getSize()+2*padding;i++){
+        data[pl++]=0;
+    }matrix->setData(data);matrix->setSize(matrix->getSize()+2*padding);
+}
+inline void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias,int anschannel) {
+    ans=new Matrix((matrix1->getSize()+1-matrix2.getSize())/stride,anschannel,new float [anschannel*((matrix1->getSize()+1-matrix2.getSize())/stride)*((matrix1->getSize()+1-matrix2.getSize())/stride)]);
 #if defined(ARM)
-    int pl = 0, si, sj, sc;
-    for (sj = 0; sj < matrix1->getSize() + 1 - matrix2.getSize(); sj += stride) {
-        for (si = 0; si < matrix1->getSize() + 1 - matrix2.getSize(); si += stride) {
-            for (sc = 0; sc < ans->getChannel(); sc++) {
+    int  pl=0, si, sj,sc;
 
-                blockdot(sc, matrix1, matrix2, si, sj, *ans, pl);
-                ans->getData()[pl] += bias[sc];
+    for( sc=0;sc<ans->getChannel();sc++){
+        for (si = 0; si < matrix1->getSize()+1-matrix2.getSize(); si +=stride)
+        {
+            for (sj = 0; sj < matrix1->getSize()+1-matrix2.getSize(); sj +=stride) {
+
+
+                blockdot(sc,matrix1, matrix2, si, sj, *ans, pl);ans->getData()[pl]+=bias[sc];
                 pl++;
             }
 
-        }
-    }
+        }}
+
 
 
 #elif defined(_ENABLE_AVX2)
     int  pl=0, si, sj,sc;
 #pragma omp parallel for schedule(dynamic)
-    for (sj = 0; sj < matrix1->getSize()+1-matrix2.getSize(); sj +=stride)
+    for( sc=0;sc<ans->getChannel();sc++){
+    for (si = 0; si < matrix1->getSize()+1-matrix2.getSize(); si +=stride)
     {
-    for (si = 0; si < matrix1->getSize()+1-matrix2.getSize(); si +=stride){
-        for( sc=0;sc<ans->getChannel();sc++) {
+   for (sj = 0; sj < matrix1->getSize()+1-matrix2.getSize(); sj +=stride) {
+
 
             blockdot(sc,matrix1, matrix2, si, sj, *ans, pl);ans->getData()[pl]+=bias[sc];
 pl++;
@@ -118,7 +151,7 @@ pl++;
 #endif
 }
 
-void blockdot(int sc, const Matrix *matrix1, Matrix matrix2, int si, int sj, Matrix ans, int pl) {
+inline void blockdot(int sc, const Matrix *matrix1, Matrix matrix2, int si, int sj, Matrix ans, int pl) {
 #if defined(ARM)
     ans.getData()[pl] = 0;
     for (int j = 0; j < matrix2.getSize(); j++) {
@@ -158,35 +191,35 @@ void blockdot(int sc, const Matrix *matrix1, Matrix matrix2, int si, int sj, Mat
 #endif
 }
 
-void Matrix::setData(float *data) {
+inline void Matrix::setData(float *data) {
     Matrix::data = data;
 }
 
-Matrix::Matrix() {}
+inline Matrix::Matrix() {}
 
 
-Matrix::~Matrix() {
+inline Matrix::~Matrix() {
     if (cnt == 1) {
         delete[] Matrix::data;
     }
 }
 
 
-unsigned int Matrix::getChannel() const {
+inline unsigned int Matrix::getChannel() const {
     return channel;
 }
 
-void Matrix::setChannel(unsigned int channel) {
+inline void Matrix::setChannel(unsigned int channel) {
     Matrix::channel = channel;
 }
 
-Matrix::Matrix(unsigned int size, unsigned int channel, float *data) : size(size), channel(channel), data(data) {}
+inline Matrix::Matrix(unsigned int size, unsigned int channel, float *data) : size(size), channel(channel), data(data) {}
 
-unsigned int Matrix::getSize() const {
+inline unsigned int Matrix::getSize() const {
     return size;
 }
 
-void Matrix::setSize(unsigned int size) {
+inline void Matrix::setSize(unsigned int size) {
     Matrix::size = size;
 }
 

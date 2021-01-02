@@ -9,7 +9,7 @@
 #if  defined(_ENABLE_AVX2)
 #include <immintrin.h>
 #endif
-
+#include "data.h"
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
@@ -44,13 +44,13 @@ public:
 
     Matrix();
 
-    Matrix(unsigned int column, unsigned int row, unsigned int channel);
+
 
 
     ~Matrix();
 };
 
-void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias);
+void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias,int anschannel);
 
 void blockdot(int sc, const Matrix *matrix1, Matrix matrix2, int si, int sj, Matrix ans, int pl);
 
@@ -59,5 +59,5 @@ void maxpool(const Matrix *matrix1, int size, Matrix *ans);
 void Relu(Matrix *matrix);
 
 void quickdot(const float *x, const float *y, long begin, long end, float *ans);
-
+void addzero(Matrix *matrix,int padding);
 #endif //CNN_MATRIX_H
