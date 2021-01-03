@@ -4,9 +4,9 @@
 
 #ifndef CNN_MATRIX_H
 #define CNN_MATRIX_H
-//#define _ENABLE_AVX2 //Please enable it if X64 CPU
-#define ARM //Please enable it if ARM CPU
-#if  defined(_ENABLE_AVX2)
+#define X86 //Please enable it if X64 CPU
+//#define ARM //Please enable it if ARM CPU
+#if  defined(X86)
 #include <immintrin.h>
 #endif
 #include "data.h"
