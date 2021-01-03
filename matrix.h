@@ -4,7 +4,7 @@
 
 #ifndef CNN_MATRIX_H
 #define CNN_MATRIX_H
-#define BLOCKSIZE 1024
+#define BLOCK 1024
 //#define X86 //Please enable it if X64 CPU
 #define ARM //Please enable it if ARM CPU
 #if  defined(X86)
@@ -63,14 +63,14 @@ void maxpool(const Matrix *matrix1, int size, Matrix *ans);
 
 void Relu(Matrix *matrix);
 
-void quickdot(float *x,  float *y, long begin, long end, float *ans);
+void quickdot(float *x, float *y, long xbegin, long length, float *ans);
 void addzero(Matrix *matrix,int padding);
 
-inline void quickdot(float *x, float *y, long begin, long end, float *ans) {
+inline void quickdot(float *x, float *y, long xbegin, long length, float *ans) {
 #if defined(ARM)
     *ans = 0;
-    for (int i = begin; i < end; i++) {
-        *ans += x[i] * y[i];
+    for (int i = 0; i < length; i++) {
+        *ans += x[i+ xbegin] * y[i];
     }
 #elif defined(X86)
     float inner_prod = 0.0f;
@@ -79,7 +79,7 @@ inline void quickdot(float *x, float *y, long begin, long end, float *ans) {
     float temp[8];
 
     long i;
-    for (i = begin; i + 8 < end; i += 8) {
+    for (i = xbegin; i + 8 < length; i += 8) {
         X = _mm256_loadu_ps(x + i);
         Y = _mm256_loadu_ps(y + i);
         acc = _mm256_add_ps(acc, _mm256_mul_ps(X, Y));
@@ -87,7 +87,7 @@ inline void quickdot(float *x, float *y, long begin, long end, float *ans) {
     _mm256_storeu_ps(&temp[0], acc);
     inner_prod = temp[0] + temp[1] + temp[2] + temp[3] + temp[4] + temp[5] +
                  temp[6] + temp[7];
-    for (; i < end; ++i) {
+    for (; i < length; ++i) {
         inner_prod += x[i] * y[i];
     }
     *ans = inner_prod;
@@ -194,7 +194,7 @@ inline void addzero(Matrix *matrix, int padding) {
 
 inline void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias, int anschannel) {
     float s=(matrix1->getSize() + 1 - matrix2.getSize()) ;
-    int size=ceil(s/2);
+    int size=ceil(s/stride);
     ans->setSize(size)  ;
     ans->setData(new float[anschannel * size*size]);
     ans->setChannel(anschannel);
@@ -261,7 +261,7 @@ inline Matrix::Matrix() {cnt++;}
 
 inline Matrix::~Matrix() {
     if (cnt == 1) {
-        //delete[] Matrix::data;
+        delete[] Matrix::data;
     }
 }
 
@@ -319,12 +319,12 @@ void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans) {
 #elif defined(X86)
     int m, n, p, si, sj, sk;
 #pragma omp parallel for schedule(dynamic)
-    for (sj = 0; sj < matrix2.getSize(); sj += BLOCKSIZE) {
-        for (si = 0; si < matrix1->getSize(); si += BLOCKSIZE) {
-            for (sk = 0; sk < matrix1->getSize(); sk += BLOCKSIZE) {
-                m = matrix1->getSize() < si + BLOCKSIZE ? matrix1->getSize() : si + BLOCKSIZE;
-                n = matrix2.getSize() < sj + BLOCKSIZE ? matrix2.getSize() : sj + BLOCKSIZE;
-                p = sk + BLOCKSIZE < matrix1->getSize() ? sk + BLOCKSIZE : matrix1->getSize();
+    for (sj = 0; sj < matrix2.getSize(); sj += BLOCK) {
+        for (si = 0; si < matrix1->getSize(); si += BLOCK) {
+            for (sk = 0; sk < matrix1->getSize(); sk += BLOCK) {
+                m = matrix1->getSize() < si + BLOCK ? matrix1->getSize() : si + BLOCK;
+                n = matrix2.getSize() < sj + BLOCK ? matrix2.getSize() : sj + BLOCK;
+                p = sk + BLOCK < matrix1->getSize() ? sk + BLOCK : matrix1->getSize();
                 doblock(matrix1,matrix2,si, sj, sk, m, n, p,*ans);
 
             }
@@ -364,6 +364,7 @@ void doblock(const Matrix * matrix1,Matrix matrix2,int si, int sj, int sk, int m
 Matrix::Matrix(const Matrix &matrix) {
     data=matrix.data;
     size=matrix.size;
+    channel=matrix.channel;
     cnt++;
 
 }
