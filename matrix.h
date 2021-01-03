@@ -4,29 +4,35 @@
 
 #ifndef CNN_MATRIX_H
 #define CNN_MATRIX_H
-#define BLOCK 1024
-//#define X86 //Please enable it if X64 CPU
-#define ARM //Please enable it if ARM CPU
+#define BLOCKSIZE 1024
+#define X86 //Please enable it if X64 CPU
+//#define ARM //Please enable it if ARM CPU
 #if  defined(X86)
 #include <immintrin.h>
 #endif
 #include "data.h"
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
+
 #include <memory.h>
 #include "math.h"
-
+//#include <omp.h>
 using namespace std;
 
 class Matrix {
 private:
-    unsigned int size, channel, cnt = 1;
+    unsigned int size, channel, cnt = 1,column,row;
     float *data;
 public:
+    Matrix(unsigned int column, unsigned int row);
 
+    unsigned int getColumn() const;
+
+    void setColumn(unsigned int column);
+
+    unsigned int getRow() const;
+
+    void setRow(unsigned int row);
 
     float *getData() const;
 
@@ -51,7 +57,7 @@ public:
     ~Matrix();
 };
 void blockdot(int sc, const Matrix *matrix1, Matrix matrix2, int si, int sj, Matrix ans, int pl);
-void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias,int anschannel);
+void convolution( Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias,int anschannel);
 
 void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans);
 
@@ -65,6 +71,14 @@ void Relu(Matrix *matrix);
 
 void quickdot(float *x, float *y, long xbegin, long length, float *ans);
 void addzero(Matrix *matrix,int padding);
+Matrix Matrix::operator*( Matrix matrix2) const {
+    float * an=new float [getRow() *matrix2.getColumn()];
+    memset(an,0,sizeof(float)*getRow() *matrix2.getColumn());
+    Matrix *ans=new Matrix(  matrix2.getColumn(),getRow(),an);
+    matrixmatrix(this, matrix2, ans);
+
+    return *ans;
+}
 
 inline void quickdot(float *x, float *y, long xbegin, long length, float *ans) {
 #if defined(ARM)
@@ -113,6 +127,8 @@ inline void Relu(Matrix *matrix) {
 }
 
 inline void maxpool(const Matrix *matrix1, int size, Matrix *ans) {
+    ans->setSize(matrix1->getSize()/2);ans->setChannel(matrix1->getChannel());
+    ans->setData(new float [ans->getChannel()*ans->getSize()*ans->getSize()]);
 #if defined(ARM)
     int pl = 0;
     for (int c = 0; c < matrix1->getChannel(); c++)
@@ -192,15 +208,14 @@ inline void addzero(Matrix *matrix, int padding) {
 #endif
 }
 
-inline void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias, int anschannel) {
+inline void convolution( Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias, int anschannel) {
     float s=(matrix1->getSize() + 1 - matrix2.getSize()) ;
     int size=ceil(s/stride);
     ans->setSize(size)  ;
-    ans->setData(new float[anschannel * size*size]);
     ans->setChannel(anschannel);
 #if defined(ARM)
     int  pl=0, si, sj,sc;
-
+    ans->setData(new float[anschannel * size*size]);
     for( sc=0;sc<ans->getChannel();sc++){
         for (si = 0; si < s; si +=stride)
         {
@@ -216,25 +231,41 @@ inline void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int 
 
 #elif defined(X86)
     int pl = 0, si, sj, sc;
+    float*data=new float[matrix1->getSize()*matrix1->getSize()*matrix1->getChannel()];
 #pragma omp parallel for schedule(dynamic)
     for (sc = 0; sc < ans->getChannel(); sc++) {
         for (si = 0; si < matrix1->getSize() + 1 - matrix2.getSize(); si += stride) {
             for (sj = 0; sj < matrix1->getSize() + 1 - matrix2.getSize(); sj += stride) {
+                for (int c = 0; c < matrix1->getChannel(); c++){
+                    for (int i = 0; i < matrix2.getSize(); i++) {
+                        for (int j = 0; j < matrix2.getSize(); j++) {
+                            data[pl++]=matrix1->getData()[c * matrix1->getSize() * matrix1->getSize() + (si + i) * matrix1->getSize() +sj+j];
+
+                        }
+                    }
+                }
 
 
-                blockdot(sc, matrix1, matrix2, si, sj, *ans, pl);
-                ans->getData()[pl] += bias[sc];
-                pl++;
             }
 
         }
     }
+matrix2.setColumn(matrix2.getSize()*matrix2.getSize()*matrix2.getChannel());
+    matrix2.setRow(anschannel);
+    matrix1->setColumn(size*size);
+    matrix1->setRow(matrix2.getSize()*matrix2.getSize());
+    Matrix temp=matrix2*(*matrix1);
+    ans->setData(temp.getData());pl=0;
+    for( sc=0;sc<ans->getChannel();sc++){
+        for (si = 0; si < size*size; si++)
+        {
+            temp.getData()[pl++]+=bias[sc];
 
+        }}
 #endif
 }
 
 inline void blockdot(int sc, const Matrix *matrix1, Matrix matrix2, int si, int sj, Matrix ans, int pl) {
-#if defined(ARM)
     ans.getData()[pl] = 0;
     for (int j = 0; j < matrix2.getSize(); j++) {
         for (int i = 0; i < matrix2.getSize(); i++) {
@@ -247,9 +278,7 @@ inline void blockdot(int sc, const Matrix *matrix1, Matrix matrix2, int si, int 
             }
         }
     }
-#elif defined(X86)
 
-#endif
 }
 
 inline void Matrix::setData(float *data) {
@@ -288,30 +317,25 @@ inline void Matrix::setSize(unsigned int size) {
 float *Matrix::getData() const {
     return data;
 }
-Matrix Matrix::operator*( Matrix matrix2) const {
-    float * an=new float [getSize() *matrix2.getSize()];
-    memset(an,0,sizeof(float)*getSize() *matrix2.getSize());
-    Matrix *ans=new Matrix(  matrix2.getSize(),getSize(),an);
-    matrixmatrix(this, matrix2, ans);
 
-    return *ans;
-}
 
 
 void Matrix::operator=(const Matrix &temp) {
     this->data=temp.data;
     size=temp.size;
-
+column=temp.column;
+row=temp.row;
+cnt++;
 }
 
 void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans) {
 #if defined(ARM)
-    for (int i = 0; i < matrix1->getSize(); i++) {
-        for (int j = 0; j < matrix2.getSize(); j++) {
-            for (int k = 0; k < matrix1->getSize(); k++) {
+    for (int i = 0; i < matrix1->getRow(); i++) {
+        for (int j = 0; j < matrix2.getColumn(); j++) {
+            for (int k = 0; k < matrix1->getColumn(); k++) {
 
-                ans->getData()[j + i * matrix2.getSize()] +=
-                        matrix1->getData()[k + i * matrix1->getSize()] * matrix2.getData()[k + j * matrix1->getSize()];
+                ans->getData()[j + i * matrix2.getColumn()] +=
+                        matrix1->getData()[k + i * matrix1->getColumn()] * matrix2.getData()[k + j * matrix1->getColumn()];
 
             }
         }
@@ -319,12 +343,12 @@ void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans) {
 #elif defined(X86)
     int m, n, p, si, sj, sk;
 #pragma omp parallel for schedule(dynamic)
-    for (sj = 0; sj < matrix2.getSize(); sj += BLOCK) {
-        for (si = 0; si < matrix1->getSize(); si += BLOCK) {
-            for (sk = 0; sk < matrix1->getSize(); sk += BLOCK) {
-                m = matrix1->getSize() < si + BLOCK ? matrix1->getSize() : si + BLOCK;
-                n = matrix2.getSize() < sj + BLOCK ? matrix2.getSize() : sj + BLOCK;
-                p = sk + BLOCK < matrix1->getSize() ? sk + BLOCK : matrix1->getSize();
+    for (sj = 0; sj < matrix2.getColumn(); sj += BLOCKSIZE) {
+        for (si = 0; si < matrix1->getRow(); si += BLOCKSIZE) {
+            for (sk = 0; sk < matrix1->getColumn(); sk += BLOCKSIZE) {
+                m = matrix1->getRow() < si + BLOCKSIZE ? matrix1->getRow() : si + BLOCKSIZE;
+                n = matrix2.getColumn() < sj + BLOCKSIZE ? matrix2.getColumn() : sj + BLOCKSIZE;
+                p = sk + BLOCKSIZE < matrix1->getColumn() ? sk + BLOCKSIZE : matrix1->getColumn();
                 doblock(matrix1,matrix2,si, sj, sk, m, n, p,*ans);
 
             }
@@ -346,16 +370,16 @@ void doblock(const Matrix * matrix1,Matrix matrix2,int si, int sj, int sk, int m
             for (k = sk; k + 8 < p; k += 8) {
 
                 acc = _mm256_add_ps(acc,
-                                    _mm256_mul_ps(_mm256_loadu_ps(matrix1->getData() + k + i * matrix1->getSize()),
-                                                  _mm256_loadu_ps(matrix2.getData() + k + j * matrix1->getSize())));
+                                    _mm256_mul_ps(_mm256_loadu_ps(matrix1->getData() + k + i * matrix1->getColumn()),
+                                                  _mm256_loadu_ps(matrix2.getData() + k + j * matrix1->getColumn())));
             }
             _mm256_storeu_ps(&temp[0], acc);
             inner_prod = temp[0] + temp[1] + temp[2] + temp[3] + temp[4] + temp[5] +
                          temp[6] + temp[7] + temp[8];
             for (; k < p; k++) {
-                inner_prod += matrix1->getData()[k + i * matrix1->getSize()] * matrix2.getData()[k + j * matrix1->getSize()];
+                inner_prod += matrix1->getData()[k + i * matrix1->getColumn()] * matrix2.getData()[k + j * matrix1->getColumn()];
             }
-            ans.getData()[j + i * matrix2.getSize()] += inner_prod;
+            ans.getData()[j + i * matrix2.getColumn()] += inner_prod;
         }
 
     }
@@ -364,8 +388,29 @@ void doblock(const Matrix * matrix1,Matrix matrix2,int si, int sj, int sk, int m
 Matrix::Matrix(const Matrix &matrix) {
     data=matrix.data;
     size=matrix.size;
+    column=matrix.column;
+    row=matrix.row;
     channel=matrix.channel;
     cnt++;
 
 }
+
+Matrix::Matrix(unsigned int column, unsigned int row) : column(column), row(row) {}
+
+unsigned int Matrix::getColumn() const {
+    return column;
+}
+
+void Matrix::setColumn(unsigned int column) {
+    Matrix::column = column;
+}
+
+unsigned int Matrix::getRow() const {
+    return row;
+}
+
+void Matrix::setRow(unsigned int row) {
+    Matrix::row = row;
+}
+
 #endif //CNN_MATRIX_H
