@@ -7,6 +7,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 find_package(OpenCV)
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
-add_executable(cnn main.cpp  matrix.cpp )
+add_executable(cnn  main.cpp )
 
 target_link_libraries(cnn ${OpenCV_LIBS})
