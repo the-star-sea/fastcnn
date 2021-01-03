@@ -4,6 +4,7 @@
 
 #ifndef CNN_MATRIX_H
 #define CNN_MATRIX_H
+#define BLOCKSIZE 1024
 //#define X86 //Please enable it if X64 CPU
 #define ARM //Please enable it if ARM CPU
 #if  defined(X86)
@@ -41,17 +42,21 @@ public:
 
     void setSize(unsigned int size);
 
+    Matrix(Matrix const &matrix);
 
     Matrix();
-
-
-
+    void operator=(Matrix const & temp);
+    Matrix operator*(Matrix temp) const;
 
     ~Matrix();
 };
 void blockdot(int sc, const Matrix *matrix1, Matrix matrix2, int si, int sj, Matrix ans, int pl);
 void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias,int anschannel);
 
+void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans);
+
+
+void doblock(const Matrix *matrix1,Matrix matrix2,int si, int sj, int sk, int m, int n, int p,Matrix ans);
 
 
 void maxpool(const Matrix *matrix1, int size, Matrix *ans);
@@ -201,7 +206,6 @@ inline void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int 
         {
             for (sj = 0; sj < s; sj +=stride) {
 
-
                 blockdot(sc,matrix1, matrix2, si, sj, *ans, pl);ans->getData()[pl]+=bias[sc];
                 pl++;
             }
@@ -252,7 +256,7 @@ inline void Matrix::setData(float *data) {
     Matrix::data = data;
 }
 
-inline Matrix::Matrix() {}
+inline Matrix::Matrix() {cnt++;}
 
 
 inline Matrix::~Matrix() {
@@ -271,7 +275,7 @@ inline void Matrix::setChannel(unsigned int channel) {
 }
 
 inline Matrix::Matrix(unsigned int size, unsigned int channel, float *data) : size(size), channel(channel),
-                                                                              data(data) {}
+                                                                              data(data) {cnt++;}
 
 inline unsigned int Matrix::getSize() const {
     return size;
@@ -284,5 +288,83 @@ inline void Matrix::setSize(unsigned int size) {
 float *Matrix::getData() const {
     return data;
 }
+Matrix Matrix::operator*( Matrix matrix2) const {
+    float * an=new float [getSize() *matrix2.getSize()];
+    memset(an,0,sizeof(float)*getSize() *matrix2.getSize());
+    Matrix *ans=new Matrix(  matrix2.getSize(),getSize(),an);
+    matrixmatrix(this, matrix2, ans);
 
+    return *ans;
+}
+
+
+void Matrix::operator=(const Matrix &temp) {
+    this->data=temp.data;
+    size=temp.size;
+
+}
+
+void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans) {
+#if defined(ARM)
+    for (int i = 0; i < matrix1->getSize(); i++) {
+        for (int j = 0; j < matrix2.getSize(); j++) {
+            for (int k = 0; k < matrix1->getSize(); k++) {
+
+                ans->getData()[j + i * matrix2.getSize()] +=
+                        matrix1->getData()[k + i * matrix1->getSize()] * matrix2.getData()[k + j * matrix1->getSize()];
+
+            }
+        }
+    }
+#elif defined(X86)
+    int m, n, p, si, sj, sk;
+#pragma omp parallel for schedule(dynamic)
+    for (sj = 0; sj < matrix2.getSize(); sj += BLOCKSIZE) {
+        for (si = 0; si < matrix1->getSize(); si += BLOCKSIZE) {
+            for (sk = 0; sk < matrix1->getSize(); sk += BLOCKSIZE) {
+                m = matrix1->getSize() < si + BLOCKSIZE ? matrix1->getSize() : si + BLOCKSIZE;
+                n = matrix2.getSize() < sj + BLOCKSIZE ? matrix2.getSize() : sj + BLOCKSIZE;
+                p = sk + BLOCKSIZE < matrix1->getSize() ? sk + BLOCKSIZE : matrix1->getSize();
+                doblock(matrix1,matrix2,si, sj, sk, m, n, p,*ans);
+
+            }
+
+        }
+
+    }
+#endif
+}
+
+void doblock(const Matrix * matrix1,Matrix matrix2,int si, int sj, int sk, int m, int n, int p,Matrix ans) {
+#if defined(X86)
+    for (int i = si; i < m; i++) {
+        for (int j = sj; j < n; j++) {
+            __m256 acc = _mm256_setzero_ps();
+            float temp[8];
+            float inner_prod;
+            int k;
+            for (k = sk; k + 8 < p; k += 8) {
+
+                acc = _mm256_add_ps(acc,
+                                    _mm256_mul_ps(_mm256_loadu_ps(matrix1->getData() + k + i * matrix1->getSize()),
+                                                  _mm256_loadu_ps(matrix2.getData() + k + j * matrix1->getSize())));
+            }
+            _mm256_storeu_ps(&temp[0], acc);
+            inner_prod = temp[0] + temp[1] + temp[2] + temp[3] + temp[4] + temp[5] +
+                         temp[6] + temp[7] + temp[8];
+            for (; k < p; k++) {
+                inner_prod += matrix1->getData()[k + i * matrix1->getSize()] * matrix2.getData()[k + j * matrix1->getSize()];
+            }
+            ans.getData()[j + i * matrix2.getSize()] += inner_prod;
+        }
+
+    }
+#endif
+}
+Matrix::Matrix(const Matrix &matrix) {
+    data=matrix.data;
+    size=matrix.size;
+    cnt++;
+
+}
 #endif //CNN_MATRIX_H
