@@ -58,6 +58,6 @@ void maxpool(const Matrix *matrix1, int size, Matrix *ans);
 
 void Relu(Matrix *matrix);
 
-void quickdot(const float *x, const float *y, long begin, long end, float *ans);
+void quickdot(float *x,  float *y, long begin, long end, float *ans);
 void addzero(Matrix *matrix,int padding);
 #endif //CNN_MATRIX_H

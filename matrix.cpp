@@ -1,6 +1,6 @@
 #include "matrix.h"
 
-inline void quickdot(const float *x, const float *y, long begin, long end, float *ans) {
+inline void quickdot(float *x,  float *y, long begin, long end, float *ans) {
 #if defined(ARM)
     *ans = 0;
     for (int i = begin; i < end; i++) {
