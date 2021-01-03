@@ -4,10 +4,30 @@ using namespace cv;
 
 int main() {
 
-    Mat image = imread("/Users/stone/CLionProjects/cnn/bg.jpg");
+    Mat image = imread("/Users/stone/CLionProjects/cnn/face.jpg");
     Mat Channels[3];
     split(image, Channels);//BGR
+Matrix * hha=new Matrix(4,2,new float);
+float* uu=new float [32];
+Matrix *bias=new Matrix(2,2,new float);
+hha->setData(uu);
+bias->setData(uu);
+float *hh=new float [32];
+for(int i=0;i<32;i++){
+    uu[i]=i;
+    hh[i]=1;
+}
+Matrix * aaaa=new Matrix;
 
+convolution(hha,*bias,aaaa,2,hh,4);
+for(int i=0;i<aaaa->getChannel();i++){
+    for(int j=0;j<aaaa->getSize();j++){
+        for(int k=0;k<aaaa->getSize();k++){
+            cout<<aaaa->getData()[i*aaaa->getSize()*aaaa->getSize()+j*aaaa->getSize()+k]<<" ";
+        }cout<<endl;
+    }
+    cout<<endl;
+}
     Matrix * conv0=new Matrix(128,3,new float [128*128*3]);//RGB
     for(int i=0;i<128*128;i++){
         conv0->getData()[i]=Channels[2].data[i]/255;

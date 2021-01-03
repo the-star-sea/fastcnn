@@ -181,54 +181,25 @@ inline void addzero(Matrix *matrix, int padding) {
     matrix->setData(data);
     matrix->setSize(matrix->getSize() + 2 * padding);
 #elif defined(X86)
-    float *data = new float[(matrix->getSize() + padding * 2) * (matrix->getSize() + padding * 2) *
-                            matrix->getChannel()];
-    int pl = 0;
-    #pragma omp parallel for schedule(dynamic)
-    for (int i = 0; i < matrix->getChannel(); i++) {
-        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
-            data[pl++] = 0;
-        }
-        for (int j = 0; j < matrix->getSize(); j++) {
-            for (int k = 0; k < padding; k++) {
-                data[pl++] = 0;
 
-            }
-            for (int k = 0; k < matrix->getSize(); k++) {
-                data[pl++] = matrix->getData()[i * matrix->getSize() * matrix->getSize() + j * matrix->getSize() + k];
-
-            }
-            for (int k = 0; k < padding; j++) {
-                data[pl++] = 0;
-
-
-            }
-        }
-
-        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
-            data[pl++] = 0;
-        }
-    }
-
-    matrix->setData(data);
-    matrix->setSize(matrix->getSize() + 2 * padding);
 
 
 #endif
 }
 
 inline void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias, int anschannel) {
-    ans->setSize((matrix1->getSize() + 1 - matrix2.getSize()) / stride)  ;
-    ans->setData(new float[anschannel * ((matrix1->getSize() + 1 - matrix2.getSize()) / stride) *
-                           ((matrix1->getSize() + 1 - matrix2.getSize()) / stride)]);
+    float s=(matrix1->getSize() + 1 - matrix2.getSize()) ;
+    int size=ceil(s/2);
+    ans->setSize(size)  ;
+    ans->setData(new float[anschannel * size*size]);
     ans->setChannel(anschannel);
 #if defined(ARM)
     int  pl=0, si, sj,sc;
 
     for( sc=0;sc<ans->getChannel();sc++){
-        for (si = 0; si < matrix1->getSize()+1-matrix2.getSize(); si +=stride)
+        for (si = 0; si < s; si +=stride)
         {
-            for (sj = 0; sj < matrix1->getSize()+1-matrix2.getSize(); sj +=stride) {
+            for (sj = 0; sj < s; sj +=stride) {
 
 
                 blockdot(sc,matrix1, matrix2, si, sj, *ans, pl);ans->getData()[pl]+=bias[sc];
