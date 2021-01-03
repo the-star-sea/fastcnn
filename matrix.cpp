@@ -207,29 +207,7 @@ inline void blockdot(int sc, const Matrix *matrix1, Matrix matrix2, int si, int 
         }
     }
 #elif defined(X86)
-    for (int i = si; i < m; i++) {
-        for (int j = sj; j < n; j++) {
-            __m256 acc = _mm256_setzero_ps();
-            float temp[8];
-            float inner_prod;
-            int k;
-            for (k = sk; k + 8 < p; k += 8) {
 
-                acc = _mm256_add_ps(acc,
-                                    _mm256_mul_ps(_mm256_loadu_ps(matrix1->getData() + k + i * matrix1->getColumn()),
-                                                  _mm256_loadu_ps(matrix2.getData() + k + j * matrix1->getColumn())));
-            }
-            _mm256_storeu_ps(&temp[0], acc);
-            inner_prod = temp[0] + temp[1] + temp[2] + temp[3] + temp[4] + temp[5] +
-                         temp[6] + temp[7] + temp[8];
-            for (; k < p; k++) {
-                inner_prod += matrix1->getData()[k + i * matrix1->getColumn()] *
-                              matrix2.getData()[k + j * matrix1->getColumn()];
-            }
-            ans.getData()[j + i * matrix2.getColumn()] += inner_prod;
-        }
-
-    }
 #endif
 }
 
