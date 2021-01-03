@@ -153,63 +153,67 @@ inline void addzero(Matrix *matrix, int padding) {
     float *data = new float[(matrix->getSize() + padding * 2) * (matrix->getSize() + padding * 2) *
                             matrix->getChannel()];
     int pl = 0;
-    for (int i = 0; i < matrix->getSize() + 2 * padding; i++) {
-        data[pl++] = 0;
-    }
     for (int i = 0; i < matrix->getChannel(); i++) {
-        for (int j = 0; j < padding; j++) {
+        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
             data[pl++] = 0;
-
         }
         for (int j = 0; j < matrix->getSize(); j++) {
+            for (int k = 0; k < padding; k++) {
+                data[pl++] = 0;
+
+            }
             for (int k = 0; k < matrix->getSize(); k++) {
                 data[pl++] = matrix->getData()[i * matrix->getSize() * matrix->getSize() + j * matrix->getSize() + k];
 
             }
+            for (int k = 0; k < padding; k++) {
+                data[pl++] = 0;
 
+
+            }
         }
-        for (int j = 0; j < padding; j++) {
+
+        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
             data[pl++] = 0;
-
-
         }
     }
-    for (int i = 0; i < matrix->getSize() + 2 * padding; i++) {
-        data[pl++] = 0;
-    }
+
     matrix->setData(data);
     matrix->setSize(matrix->getSize() + 2 * padding);
 #elif defined(X86)
     float *data = new float[(matrix->getSize() + padding * 2) * (matrix->getSize() + padding * 2) *
                             matrix->getChannel()];
     int pl = 0;
-    for (int i = 0; i < matrix->getSize() + 2 * padding; i++) {
-        data[pl++] = 0;
-    }
-#pragma omp parallel for schedule(dynamic)
+    #pragma omp parallel for schedule(dynamic)
     for (int i = 0; i < matrix->getChannel(); i++) {
-        for (int j = 0; j < padding; j++) {
+        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
             data[pl++] = 0;
-
         }
         for (int j = 0; j < matrix->getSize(); j++) {
+            for (int k = 0; k < padding; k++) {
+                data[pl++] = 0;
+
+            }
             for (int k = 0; k < matrix->getSize(); k++) {
                 data[pl++] = matrix->getData()[i * matrix->getSize() * matrix->getSize() + j * matrix->getSize() + k];
 
             }
+            for (int k = 0; k < padding; j++) {
+                data[pl++] = 0;
 
+
+            }
         }
-        for (int j = 0; j < padding; j++) {
+
+        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
             data[pl++] = 0;
-
-
         }
     }
-    for (int i = 0; i < matrix->getSize() + 2 * padding; i++) {
-        data[pl++] = 0;
-    }
+
     matrix->setData(data);
     matrix->setSize(matrix->getSize() + 2 * padding);
+
+
 #endif
 }
 
@@ -282,7 +286,7 @@ inline Matrix::Matrix() {}
 
 inline Matrix::~Matrix() {
     if (cnt == 1) {
-        delete[] Matrix::data;
+        //delete[] Matrix::data;
     }
 }
 

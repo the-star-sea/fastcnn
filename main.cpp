@@ -4,9 +4,10 @@ using namespace cv;
 
 int main() {
 
-    Mat image = imread("/Users/stone/CLionProjects/SimpleCNNbyCPP/samples/face.jpg");
+    Mat image = imread("/Users/stone/CLionProjects/cnn/bg.jpg");
     Mat Channels[3];
     split(image, Channels);//BGR
+
     Matrix * conv0=new Matrix(128,3,new float [128*128*3]);//RGB
     for(int i=0;i<128*128;i++){
         conv0->getData()[i]=Channels[2].data[i]/255;
@@ -35,12 +36,12 @@ maxpool(ans1,2,conv1);
     Matrix*ans3=new Matrix;
     convolution(conv2,*para3,ans3,2,conv2_bias,32);
     Relu(ans3);
-    float *an1,*an2;
+    float *an1=new float,*an2=new float ;
     quickdot(fc0_weight,ans3->getData(),0,2048,an1);
     quickdot(fc0_weight,ans3->getData(),2048,4096,an2);
     *an1+=fc0_bias[0];*an2+=fc0_bias[1];
     float man=exp(*an1)/(exp(*an1)+exp(*an2));
-    cout<<"people probility: "<<man<<endl<<"nonpeople probility: "<<1-man;
+    cout<<"nonpeople probility: "<<man<<endl<<"people probility: "<<1-man;
     return 0;
 }
 
