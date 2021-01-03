@@ -153,9 +153,10 @@ inline void addzero(Matrix *matrix, int padding) {
 }
 
 inline void convolution(const Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias, int anschannel) {
-    ans = new Matrix((matrix1->getSize() + 1 - matrix2.getSize()) / stride, anschannel,
-                     new float[anschannel * ((matrix1->getSize() + 1 - matrix2.getSize()) / stride) *
-                               ((matrix1->getSize() + 1 - matrix2.getSize()) / stride)]);
+    ans->setSize((matrix1->getSize() + 1 - matrix2.getSize()) / stride)  ;
+    ans->setData(new float[anschannel * ((matrix1->getSize() + 1 - matrix2.getSize()) / stride) *
+                           ((matrix1->getSize() + 1 - matrix2.getSize()) / stride)]);
+    ans->setChannel(anschannel);
 #if defined(ARM)
     int  pl=0, si, sj,sc;
 
