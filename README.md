@@ -19,7 +19,9 @@ https://github.com/haha-stone/cnn
 
 
 ![image.png](https://i.loli.net/2021/01/04/1X3RAOBag2utQ95.png)
-2.输入path
+
+
+2. 输入path
 
 
 ![image.png](https://i.loli.net/2021/01/04/HuYpAms6bRDiQtj.png)
