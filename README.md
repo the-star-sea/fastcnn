@@ -11,8 +11,11 @@ ID：11911611
 3.  通过矩阵乘法，编译优化等各类手段优化
 
 4.  可跨平台运行
+
 ##代码展示
 https://github.com/haha-stone/cnn
+##使用说明
+
 ##主要函数
 ```
 void addzero(Matrix *matrix, int padding);

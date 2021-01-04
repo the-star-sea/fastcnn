@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.17)
 project(cnn)
 
 set(CMAKE_CXX_STANDARD 14)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -O3")
 
 set(OpenCV_DIR "C:/OpenCV/build/install")
 find_package(OpenCV REQUIRED)
