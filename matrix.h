@@ -8,8 +8,11 @@
 #define X86 //Please enable it if X64 CPU
 //#define ARM //Please enable it if ARM CPU
 #if  defined(X86)
+
 #include <immintrin.h>
+
 #endif
+
 #include "data.h"
 #include <iostream>
 #include <opencv2/opencv.hpp>
@@ -20,7 +23,7 @@ using namespace std;
 
 class Matrix {
 private:
-    unsigned int size, channel, cnt = 1,column,row;
+    unsigned int size, channel, cnt = 1, column, row;
     float *data;
 public:
     Matrix(unsigned int column, unsigned int row);
@@ -50,18 +53,22 @@ public:
     Matrix(Matrix const &matrix);
 
     Matrix();
-    void operator=(Matrix const & temp);
+
+    void operator=(Matrix const &temp);
+
     Matrix operator*(Matrix temp) const;
 
     ~Matrix();
 };
+
 void blockdot(int sc, const Matrix *matrix1, Matrix matrix2, int si, int sj, Matrix ans, int pl);
-void convolution( Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias,int anschannel);
 
-void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans);
+void convolution(Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias, int anschannel);
+
+void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix *ans);
 
 
-void doblock(const Matrix *matrix1,Matrix matrix2,int si, int sj, int sk, int m, int n, int p,Matrix ans);
+void doblock(const Matrix *matrix1, Matrix matrix2, int si, int sj, int sk, int m, int n, int p, Matrix ans);
 
 
 void maxpool(const Matrix *matrix1, int size, Matrix *ans);
@@ -69,11 +76,13 @@ void maxpool(const Matrix *matrix1, int size, Matrix *ans);
 void Relu(Matrix *matrix);
 
 void quickdot(float *x, float *y, long xbegin, long length, float *ans);
-void addzero(Matrix *matrix,int padding);
-Matrix Matrix::operator*( Matrix matrix2) const {
-    float * an=new float [getRow() *matrix2.getColumn()];
-    memset(an,0,sizeof(float)*getRow() *matrix2.getColumn());
-    Matrix *ans=new Matrix(  matrix2.getColumn(),getRow(),an);
+
+void addzero(Matrix *matrix, int padding);
+
+Matrix Matrix::operator*(Matrix matrix2) const {
+    float *an = new float[getRow() * matrix2.getColumn()];
+    memset(an, 0, sizeof(float) * getRow() * matrix2.getColumn());
+    Matrix *ans = new Matrix(matrix2.getColumn(), getRow(), an);
     matrixmatrix(this, matrix2, ans);
 
     return *ans;
@@ -92,8 +101,8 @@ inline void quickdot(float *x, float *y, long xbegin, long length, float *ans) {
     float temp[8];
 
     long i;
-    for (i = xbegin; i + 8 < length; i += 8) {
-        X = _mm256_loadu_ps(x + i);
+    for (i = 0; i + 8 < length; i += 8) {
+        X = _mm256_loadu_ps(x + i + xbegin);
         Y = _mm256_loadu_ps(y + i);
         acc = _mm256_add_ps(acc, _mm256_mul_ps(X, Y));
     }
@@ -101,7 +110,7 @@ inline void quickdot(float *x, float *y, long xbegin, long length, float *ans) {
     inner_prod = temp[0] + temp[1] + temp[2] + temp[3] + temp[4] + temp[5] +
                  temp[6] + temp[7];
     for (; i < length; ++i) {
-        inner_prod += x[i] * y[i];
+        inner_prod += x[i + xbegin] * y[i];
     }
     *ans = inner_prod;
 #endif
@@ -113,7 +122,7 @@ inline void Relu(Matrix *matrix) {
         if (matrix->getData()[k] < 0)matrix->getData()[k] = 0;
     }
 #elif defined(X86)
-    //#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
     for (int k = 0; k < matrix->getSize(); k++) {
         for (int j = 0; j < matrix->getSize(); j++) {
             for (int i = 0; i < matrix->getChannel(); i++) {
@@ -126,8 +135,9 @@ inline void Relu(Matrix *matrix) {
 }
 
 inline void maxpool(const Matrix *matrix1, int size, Matrix *ans) {
-    ans->setSize(matrix1->getSize()/2);ans->setChannel(matrix1->getChannel());
-    ans->setData(new float [ans->getChannel()*ans->getSize()*ans->getSize()]);
+    ans->setSize(matrix1->getSize() / 2);
+    ans->setChannel(matrix1->getChannel());
+    ans->setData(new float[ans->getChannel() * ans->getSize() * ans->getSize()]);
 #if defined(ARM)
     int pl = 0;
     for (int c = 0; c < matrix1->getChannel(); c++)
@@ -148,7 +158,7 @@ inline void maxpool(const Matrix *matrix1, int size, Matrix *ans) {
     }
 #elif defined(X86)
     int pl = 0;
-//#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
     for (int c = 0; c < matrix1->getChannel(); c++) {
         for (int si = 0; si < matrix1->getSize(); si += size) {
             for (int sj = 0; sj < matrix1->getSize(); sj += size) {
@@ -205,7 +215,7 @@ inline void addzero(Matrix *matrix, int padding) {
                             matrix->getChannel()];
     int pl = 0;
     for (int i = 0; i < matrix->getChannel(); i++) {
-        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
+        for (int j = 0; j < (matrix->getSize() + 2 * padding) * padding; j++) {
             data[pl++] = 0;
         }
         for (int j = 0; j < matrix->getSize(); j++) {
@@ -224,7 +234,7 @@ inline void addzero(Matrix *matrix, int padding) {
             }
         }
 
-        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
+        for (int j = 0; j < (matrix->getSize() + 2 * padding) * padding; j++) {
             data[pl++] = 0;
         }
     }
@@ -236,10 +246,10 @@ inline void addzero(Matrix *matrix, int padding) {
 #endif
 }
 
-inline void convolution( Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias, int anschannel) {
-    float s=(matrix1->getSize() + 1 - matrix2.getSize()) ;
-    int size=ceil(s/stride);
-    ans->setSize(size)  ;
+inline void convolution(Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias, int anschannel) {
+    float s = (matrix1->getSize() + 1 - matrix2.getSize());
+    int size = ceil(s / stride);
+    ans->setSize(size);
     ans->setChannel(anschannel);
 #if defined(ARM)
     int  pl=0, si, sj,sc;
@@ -259,20 +269,21 @@ inline void convolution( Matrix *matrix1, Matrix matrix2, Matrix *ans, int strid
 
 #elif defined(X86)
     int pl = 0, si, sj, sc;
-    matrix2.setColumn(matrix2.getSize()*matrix2.getSize()*matrix2.getChannel());
+    matrix2.setColumn(matrix2.getSize() * matrix2.getSize() * matrix2.getChannel());
     matrix2.setRow(anschannel);
-    matrix1->setColumn(size*size);
-    matrix1->setRow(matrix2.getSize()*matrix2.getSize()*matrix2.getChannel());
-    float*data=new float[matrix1->getColumn()*matrix1->getRow()];
-//#pragma omp parallel for schedule(dynamic)
+    matrix1->setColumn(size * size);
+    matrix1->setRow(matrix2.getSize() * matrix2.getSize() * matrix2.getChannel());
+    float *data = new float[matrix1->getColumn() * matrix1->getRow()];
+#pragma omp parallel for schedule(dynamic)
 
     for (si = 0; si < matrix1->getSize() + 1 - matrix2.getSize(); si += stride) {
         for (sj = 0; sj < matrix1->getSize() + 1 - matrix2.getSize(); sj += stride) {
-            for (int c = 0; c < matrix1->getChannel(); c++){
+            for (int c = 0; c < matrix1->getChannel(); c++) {
                 for (int i = 0; i < matrix2.getSize(); i++) {
                     for (int j = 0; j < matrix2.getSize(); j++) {
 
-                        data[pl++]=matrix1->getData()[c * matrix1->getSize() * matrix1->getSize() + (si + i) * matrix1->getSize() +sj+j];
+                        data[pl++] = matrix1->getData()[c * matrix1->getSize() * matrix1->getSize() +
+                                                        (si + i) * matrix1->getSize() + sj + j];
 
                     }
                 }
@@ -284,14 +295,15 @@ inline void convolution( Matrix *matrix1, Matrix matrix2, Matrix *ans, int strid
     }
 
     matrix1->setData(data);
-    Matrix temp=matrix2*(*matrix1);
-    ans->setData(temp.getData());pl=0;
-    for( sc=0;sc<ans->getChannel();sc++){
-        for (si = 0; si < size*size; si++)
-        {
-            temp.getData()[pl++]+=bias[sc];
+    Matrix temp = matrix2 * (*matrix1);
+    ans->setData(temp.getData());
+    pl = 0;
+    for (sc = 0; sc < ans->getChannel(); sc++) {
+        for (si = 0; si < size * size; si++) {
+            temp.getData()[pl++] += bias[sc];
 
-        }}
+        }
+    }
 #endif
 }
 
@@ -315,7 +327,7 @@ inline void Matrix::setData(float *data) {
     Matrix::data = data;
 }
 
-inline Matrix::Matrix() {cnt++;}
+inline Matrix::Matrix() { cnt++; }
 
 
 inline Matrix::~Matrix() {
@@ -334,7 +346,7 @@ inline void Matrix::setChannel(unsigned int channel) {
 }
 
 inline Matrix::Matrix(unsigned int size, unsigned int channel, float *data) : size(size), channel(channel),
-                                                                              data(data) {cnt++;}
+                                                                              data(data) { cnt++; }
 
 inline unsigned int Matrix::getSize() const {
     return size;
@@ -349,16 +361,15 @@ float *Matrix::getData() const {
 }
 
 
-
 void Matrix::operator=(const Matrix &temp) {
-    this->data=temp.data;
-    size=temp.size;
-    column=temp.column;
-    row=temp.row;
+    this->data = temp.data;
+    size = temp.size;
+    column = temp.column;
+    row = temp.row;
     cnt++;
 }
 
-void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans) {
+void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix *ans) {
 #if defined(ARM)
     for (int i = 0; i < matrix1->getRow(); i++) {
         for (int j = 0; j < matrix2.getColumn(); j++) {
@@ -372,14 +383,14 @@ void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans) {
     }
 #elif defined(X86)
     int m, n, p, si, sj, sk;
-//#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
     for (sj = 0; sj < matrix2.getColumn(); sj += BLOCK) {
         for (si = 0; si < matrix1->getRow(); si += BLOCK) {
             for (sk = 0; sk < matrix1->getColumn(); sk += BLOCK) {
                 m = matrix1->getRow() < si + BLOCK ? matrix1->getRow() : si + BLOCK;
                 n = matrix2.getColumn() < sj + BLOCK ? matrix2.getColumn() : sj + BLOCK;
                 p = sk + BLOCK < matrix1->getColumn() ? sk + BLOCK : matrix1->getColumn();
-                doblock(matrix1,matrix2,si, sj, sk, m, n, p,*ans);
+                doblock(matrix1, matrix2, si, sj, sk, m, n, p, *ans);
 
             }
 
@@ -389,7 +400,7 @@ void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans) {
 #endif
 }
 
-void doblock(const Matrix * matrix1,Matrix matrix2,int si, int sj, int sk, int m, int n, int p,Matrix ans) {
+void doblock(const Matrix *matrix1, Matrix matrix2, int si, int sj, int sk, int m, int n, int p, Matrix ans) {
 #if defined(X86)
     for (int i = si; i < m; i++) {
         for (int j = sj; j < n; j++) {
@@ -407,7 +418,8 @@ void doblock(const Matrix * matrix1,Matrix matrix2,int si, int sj, int sk, int m
             inner_prod = temp[0] + temp[1] + temp[2] + temp[3] + temp[4] + temp[5] +
                          temp[6] + temp[7] + temp[8];
             for (; k < p; k++) {
-                inner_prod += matrix1->getData()[k + i * matrix1->getColumn()] * matrix2.getData()[k + j * matrix1->getColumn()];
+                inner_prod += matrix1->getData()[k + i * matrix1->getColumn()] *
+                              matrix2.getData()[k + j * matrix1->getColumn()];
             }
             ans.getData()[j + i * matrix2.getColumn()] += inner_prod;
         }
@@ -415,12 +427,13 @@ void doblock(const Matrix * matrix1,Matrix matrix2,int si, int sj, int sk, int m
     }
 #endif
 }
+
 Matrix::Matrix(const Matrix &matrix) {
-    data=matrix.data;
-    size=matrix.size;
-    column=matrix.column;
-    row=matrix.row;
-    channel=matrix.channel;
+    data = matrix.data;
+    size = matrix.size;
+    column = matrix.column;
+    row = matrix.row;
+    channel = matrix.channel;
     cnt++;
 
 }
