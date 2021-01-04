@@ -4,7 +4,7 @@
 
 #ifndef CNN_MATRIX_H
 #define CNN_MATRIX_H
-#define BLOCKSIZE 1024
+#define BLOCK 256
 #define X86 //Please enable it if X64 CPU
 //#define ARM //Please enable it if ARM CPU
 #if  defined(X86)
@@ -15,8 +15,7 @@
 #include <opencv2/opencv.hpp>
 
 #include <memory.h>
-#include "math.h"
-//#include <omp.h>
+
 using namespace std;
 
 class Matrix {
@@ -114,7 +113,7 @@ inline void Relu(Matrix *matrix) {
         if (matrix->getData()[k] < 0)matrix->getData()[k] = 0;
     }
 #elif defined(X86)
-    #pragma omp parallel for schedule(dynamic)
+    //#pragma omp parallel for schedule(dynamic)
     for (int k = 0; k < matrix->getSize(); k++) {
         for (int j = 0; j < matrix->getSize(); j++) {
             for (int i = 0; i < matrix->getChannel(); i++) {
@@ -149,7 +148,7 @@ inline void maxpool(const Matrix *matrix1, int size, Matrix *ans) {
     }
 #elif defined(X86)
     int pl = 0;
-#pragma omp parallel for schedule(dynamic)
+//#pragma omp parallel for schedule(dynamic)
     for (int c = 0; c < matrix1->getChannel(); c++) {
         for (int si = 0; si < matrix1->getSize(); si += size) {
             for (int sj = 0; sj < matrix1->getSize(); sj += size) {
@@ -202,7 +201,36 @@ inline void addzero(Matrix *matrix, int padding) {
     matrix->setData(data);
     matrix->setSize(matrix->getSize() + 2 * padding);
 #elif defined(X86)
+    float *data = new float[(matrix->getSize() + padding * 2) * (matrix->getSize() + padding * 2) *
+                            matrix->getChannel()];
+    int pl = 0;
+    for (int i = 0; i < matrix->getChannel(); i++) {
+        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
+            data[pl++] = 0;
+        }
+        for (int j = 0; j < matrix->getSize(); j++) {
+            for (int k = 0; k < padding; k++) {
+                data[pl++] = 0;
 
+            }
+            for (int k = 0; k < matrix->getSize(); k++) {
+                data[pl++] = matrix->getData()[i * matrix->getSize() * matrix->getSize() + j * matrix->getSize() + k];
+
+            }
+            for (int k = 0; k < padding; k++) {
+                data[pl++] = 0;
+
+
+            }
+        }
+
+        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
+            data[pl++] = 0;
+        }
+    }
+
+    matrix->setData(data);
+    matrix->setSize(matrix->getSize() + 2 * padding);
 
 
 #endif
@@ -231,29 +259,31 @@ inline void convolution( Matrix *matrix1, Matrix matrix2, Matrix *ans, int strid
 
 #elif defined(X86)
     int pl = 0, si, sj, sc;
-    float*data=new float[matrix1->getSize()*matrix1->getSize()*matrix1->getChannel()];
-#pragma omp parallel for schedule(dynamic)
-    for (sc = 0; sc < ans->getChannel(); sc++) {
-        for (si = 0; si < matrix1->getSize() + 1 - matrix2.getSize(); si += stride) {
-            for (sj = 0; sj < matrix1->getSize() + 1 - matrix2.getSize(); sj += stride) {
-                for (int c = 0; c < matrix1->getChannel(); c++){
-                    for (int i = 0; i < matrix2.getSize(); i++) {
-                        for (int j = 0; j < matrix2.getSize(); j++) {
-                            data[pl++]=matrix1->getData()[c * matrix1->getSize() * matrix1->getSize() + (si + i) * matrix1->getSize() +sj+j];
-
-                        }
-                    }
-                }
-
-
-            }
-
-        }
-    }
-matrix2.setColumn(matrix2.getSize()*matrix2.getSize()*matrix2.getChannel());
+    matrix2.setColumn(matrix2.getSize()*matrix2.getSize()*matrix2.getChannel());
     matrix2.setRow(anschannel);
     matrix1->setColumn(size*size);
-    matrix1->setRow(matrix2.getSize()*matrix2.getSize());
+    matrix1->setRow(matrix2.getSize()*matrix2.getSize()*matrix2.getChannel());
+    float*data=new float[matrix1->getColumn()*matrix1->getRow()];
+//#pragma omp parallel for schedule(dynamic)
+
+    for (si = 0; si < matrix1->getSize() + 1 - matrix2.getSize(); si += stride) {
+        for (sj = 0; sj < matrix1->getSize() + 1 - matrix2.getSize(); sj += stride) {
+            for (int c = 0; c < matrix1->getChannel(); c++){
+                for (int i = 0; i < matrix2.getSize(); i++) {
+                    for (int j = 0; j < matrix2.getSize(); j++) {
+
+                        data[pl++]=matrix1->getData()[c * matrix1->getSize() * matrix1->getSize() + (si + i) * matrix1->getSize() +sj+j];
+
+                    }
+                }
+            }
+
+
+        }
+
+    }
+
+    matrix1->setData(data);
     Matrix temp=matrix2*(*matrix1);
     ans->setData(temp.getData());pl=0;
     for( sc=0;sc<ans->getChannel();sc++){
@@ -323,9 +353,9 @@ float *Matrix::getData() const {
 void Matrix::operator=(const Matrix &temp) {
     this->data=temp.data;
     size=temp.size;
-column=temp.column;
-row=temp.row;
-cnt++;
+    column=temp.column;
+    row=temp.row;
+    cnt++;
 }
 
 void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans) {
@@ -342,13 +372,13 @@ void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix* ans) {
     }
 #elif defined(X86)
     int m, n, p, si, sj, sk;
-#pragma omp parallel for schedule(dynamic)
-    for (sj = 0; sj < matrix2.getColumn(); sj += BLOCKSIZE) {
-        for (si = 0; si < matrix1->getRow(); si += BLOCKSIZE) {
-            for (sk = 0; sk < matrix1->getColumn(); sk += BLOCKSIZE) {
-                m = matrix1->getRow() < si + BLOCKSIZE ? matrix1->getRow() : si + BLOCKSIZE;
-                n = matrix2.getColumn() < sj + BLOCKSIZE ? matrix2.getColumn() : sj + BLOCKSIZE;
-                p = sk + BLOCKSIZE < matrix1->getColumn() ? sk + BLOCKSIZE : matrix1->getColumn();
+//#pragma omp parallel for schedule(dynamic)
+    for (sj = 0; sj < matrix2.getColumn(); sj += BLOCK) {
+        for (si = 0; si < matrix1->getRow(); si += BLOCK) {
+            for (sk = 0; sk < matrix1->getColumn(); sk += BLOCK) {
+                m = matrix1->getRow() < si + BLOCK ? matrix1->getRow() : si + BLOCK;
+                n = matrix2.getColumn() < sj + BLOCK ? matrix2.getColumn() : sj + BLOCK;
+                p = sk + BLOCK < matrix1->getColumn() ? sk + BLOCK : matrix1->getColumn();
                 doblock(matrix1,matrix2,si, sj, sk, m, n, p,*ans);
 
             }

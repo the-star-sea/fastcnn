@@ -4,8 +4,8 @@ using namespace cv;
 
 int main() {
 
-    Mat img = imread("/Users/stone/CLionProjects/cnn/face.jpg");
-    clock_t start, End;
+    Mat img = imread("C:\\Users\\Stone\\CLionProjects\\cnn\\bg.jpg");
+   clock_t start, End;
     start = clock();
     int row = img.rows;
     int col = img.cols;
@@ -37,6 +37,7 @@ int main() {
     Matrix *para2=new Matrix(3,16,conv1_weight);
     Matrix *para3=new Matrix(3,32,conv2_weight);
     addzero(conv0,1);
+
 convolution(conv0,*para1,ans1,2,conv0_bias,16);
 Relu(ans1);
     Matrix * conv1=new Matrix;//(ans1->getSize()/2,ans1->getChannel(),new float [ans1->getSize()*ans1->getSize()*ans1->getChannel()/4]);
