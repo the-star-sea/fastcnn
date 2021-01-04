@@ -16,8 +16,12 @@ ID：11911611
 https://github.com/haha-stone/cnn
 ## 使用说明
 1. 按注释修改CMakeLists.txt
+
+
 ![image.png](https://i.loli.net/2021/01/04/1X3RAOBag2utQ95.png)
-2.  输入path
+2.输入path
+
+
 ![image.png](https://i.loli.net/2021/01/04/HuYpAms6bRDiQtj.png)
  
 ## 主要函数
