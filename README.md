@@ -85,10 +85,17 @@ void Relu(Matrix *matrix);
 5. 编译器优化
 ## 测试
 ![face.jpg](https://i.loli.net/2021/01/04/hn2Ui3IqsltY1wg.jpg)
-优化前
+1. 优化前
+
+
 ![image.png](https://i.loli.net/2021/01/04/GuKNkaqDhUtWBjr.png)
-优化后
+2. 优化后
+
+
 ![image.png](https://i.loli.net/2021/01/04/jYKeWiNaMq892T3.png)
+3.arm
+
+
 ![fc2cd12b13b923f1ad05531e481fbf0.jpg](https://i.loli.net/2021/01/04/Ym8JQscDC3vFxRA.jpg)
 ##遇到的问题
 1. opencv的使用
