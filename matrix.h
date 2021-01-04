@@ -5,7 +5,7 @@
 #ifndef CNN_MATRIX_H
 #define CNN_MATRIX_H
 #define BLOCK 256
-//#define X86 //Please enable it if X64 CPU
+#define X86 //Please enable it if X64 CPU
 #define ARM //Please enable it if ARM CPU
 #if  defined(X86)
 
@@ -92,7 +92,7 @@ inline void quickdot(float *x, float *y, long xbegin, long length, float *ans) {
 #if defined(ARM)
     *ans = 0;
     for (int i = 0; i < length; i++) {
-        *ans += x[i+ xbegin] * y[i];
+        *ans += x[i + xbegin] * y[i];
     }
 #elif defined(X86)
     float inner_prod = 0.0f;
@@ -140,10 +140,9 @@ inline void maxpool(const Matrix *matrix1, int size, Matrix *ans) {
     ans->setData(new float[ans->getChannel() * ans->getSize() * ans->getSize()]);
 #if defined(ARM)
     int pl = 0;
-    for (int c = 0; c < matrix1->getChannel(); c++)
-    {
+    for (int c = 0; c < matrix1->getChannel(); c++) {
         for (int si = 0; si < matrix1->getSize(); si += size) {
-            for (int sj = 0; sj < matrix1->getSize(); sj += size)     {
+            for (int sj = 0; sj < matrix1->getSize(); sj += size) {
                 ans->getData()[pl] = 0;
                 for (int j = 0; j < size; j++) {
                     for (int i = 0; i < size; i++) {
@@ -184,7 +183,7 @@ inline void addzero(Matrix *matrix, int padding) {
                             matrix->getChannel()];
     int pl = 0;
     for (int i = 0; i < matrix->getChannel(); i++) {
-        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
+        for (int j = 0; j < (matrix->getSize() + 2 * padding) * padding; j++) {
             data[pl++] = 0;
         }
         for (int j = 0; j < matrix->getSize(); j++) {
@@ -203,7 +202,7 @@ inline void addzero(Matrix *matrix, int padding) {
             }
         }
 
-        for (int j = 0; j < (matrix->getSize() + 2 * padding)*padding; j++) {
+        for (int j = 0; j < (matrix->getSize() + 2 * padding) * padding; j++) {
             data[pl++] = 0;
         }
     }
@@ -252,19 +251,19 @@ inline void convolution(Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride
     ans->setSize(size);
     ans->setChannel(anschannel);
 #if defined(ARM)
-    int  pl=0, si, sj,sc;
-    ans->setData(new float[anschannel * size*size]);
-    for( sc=0;sc<ans->getChannel();sc++){
-        for (si = 0; si < s; si +=stride)
-        {
-            for (sj = 0; sj < s; sj +=stride) {
+    int pl = 0, si, sj, sc;
+    ans->setData(new float[anschannel * size * size]);
+    for (sc = 0; sc < ans->getChannel(); sc++) {
+        for (si = 0; si < s; si += stride) {
+            for (sj = 0; sj < s; sj += stride) {
 
-                blockdot(sc,matrix1, matrix2, si, sj, *ans, pl);ans->getData()[pl]+=bias[sc];
+                blockdot(sc, matrix1, matrix2, si, sj, *ans, pl);
+                ans->getData()[pl] += bias[sc];
                 pl++;
             }
 
-        }}
-
+        }
+    }
 
 
 #elif defined(X86)
@@ -376,7 +375,8 @@ void matrixmatrix(const Matrix *matrix1, Matrix matrix2, Matrix *ans) {
             for (int k = 0; k < matrix1->getColumn(); k++) {
 
                 ans->getData()[j + i * matrix2.getColumn()] +=
-                        matrix1->getData()[k + i * matrix1->getColumn()] * matrix2.getData()[k + j * matrix1->getColumn()];
+                        matrix1->getData()[k + i * matrix1->getColumn()] *
+                        matrix2.getData()[k + j * matrix1->getColumn()];
 
             }
         }

@@ -39,12 +39,12 @@ int main() {
 
     convolution(conv0, *para1, ans1, 2, conv0_bias, 16);
     Relu(ans1);
-    Matrix *conv1 = new Matrix;//(ans1->getSize()/2,ans1->getChannel(),new float [ans1->getSize()*ans1->getSize()*ans1->getChannel()/4]);
+    Matrix *conv1 = new Matrix;
     maxpool(ans1, 2, conv1);
     Matrix *ans2 = new Matrix;
     convolution(conv1, *para2, ans2, 1, conv1_bias, 32);
     Relu(ans2);
-    Matrix *conv2 = new Matrix;//(ans2->getSize()/2,ans2->getChannel(),new float [ans2->getSize()*ans2->getSize()*ans2->getChannel()/4]);
+    Matrix *conv2 = new Matrix;
     maxpool(ans2, 2, conv2);
     addzero(conv2, 1);
     Matrix *ans3 = new Matrix;
