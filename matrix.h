@@ -6,7 +6,7 @@
 #define CNN_MATRIX_H
 #define BLOCK 256
 #define X86 //Please enable it if X64 CPU
-#define ARM //Please enable it if ARM CPU
+//#define ARM //Please enable it if ARM CPU
 #if  defined(X86)
 
 #include <immintrin.h>
