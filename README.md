@@ -12,15 +12,15 @@ ID：11911611
 
 4.  可跨平台运行
 
-##代码展示
+## 代码展示
 https://github.com/haha-stone/cnn
-##使用说明
+## 使用说明
 1. 按注释修改CMakeLists.txt
 ![image.png](https://i.loli.net/2021/01/04/1X3RAOBag2utQ95.png)
 2.  输入path
 ![image.png](https://i.loli.net/2021/01/04/HuYpAms6bRDiQtj.png)
  
-##主要函数
+## 主要函数
 ```
 void addzero(Matrix *matrix, int padding);
 void convolution(Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias, int anschannel);
@@ -73,7 +73,7 @@ void Relu(Matrix *matrix);
         }
     }
 ```
-##优化
+## 优化
 1. 在卷积运算中，将kernel视为一个窗口，该窗口每移动一次就会得到9个数与其相乘，将这九个数拉直为一行，并使用行主序，使得访问内存变快
 
 2. 使用矩阵乘法的优化，包括avx,omp,分块(omp基本没起到作用，怀疑是数据量太小)
@@ -97,7 +97,7 @@ void Relu(Matrix *matrix);
 
 
 ![fc2cd12b13b923f1ad05531e481fbf0.jpg](https://i.loli.net/2021/01/04/Ym8JQscDC3vFxRA.jpg)
-##遇到的问题
+## 遇到的问题
 1. opencv的使用
 
 一开始是在mac上使用clion,由于openmp和avx需用gcc,而mac上编译opencv用的是clang不得不转到windows平台
