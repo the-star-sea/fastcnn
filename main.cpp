@@ -4,8 +4,10 @@ using namespace std;
 using namespace cv;
 
 int main() {
-
-    Mat img = imread("C:\\Users\\Stone\\CLionProjects\\cnn\\face.jpg");
+    cout<<"please input the path of the imge"<<endl;
+    String path;
+    cin>>path;
+    Mat img = imread(path);
     clock_t start, End;
     start = clock();
     int row = img.rows;
