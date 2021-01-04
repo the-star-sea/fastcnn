@@ -4,7 +4,7 @@ using namespace std;
 using namespace cv;
 
 int main() {
-    cout<<"please input the path of the imge"<<endl;
+    cout<<"please input the path of the imge: "<<endl;
     String path;
     cin>>path;
     Mat img = imread(path);
