@@ -57,8 +57,9 @@ int main() {
     quickdot(fc0_weight, ans3->getData(), 2048, 2048, an2);
     *an1 += fc0_bias[0];
     *an2 += fc0_bias[1];
-    float man = exp(*an1) / (exp(*an1) + exp(*an2));
-    cout << "nonpeople probility: " << man << endl << "people probility: " << 1 - man << endl;
+    float object = exp(*an1) / (exp(*an1) + exp(*an2));
+    float man=exp(*an2) / (exp(*an1) + exp(*an2));
+    cout << "nonpeople probility: " << object << endl << "people probility: " <<  man << endl;
     End = clock();
     double endtime = (double) (End - start) / CLOCKS_PER_SEC;
     cout << "Total time:" << endtime * 1000 << "ms" << endl;
