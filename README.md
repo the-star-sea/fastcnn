@@ -1,40 +1,36 @@
-# CNN
-姓名：张通
+# Fast Face Detection
+Tong Zhang
 
-ID：11911611
-
-## 代码功能
-1.  高效，快速辨别人脸
+## Function
+-  Efficient and fast face recognition
     
-2.  卷积层的各函数均可调整参数，如padding
+-  Each function of the convolution layer is parameter tunable，such as padding
     
-3.  通过矩阵乘法，编译优化等各类手段优化
+-  Optimization by matrix multiplication, compilation optimization and various other means.
 
-4.  可跨平台运行
+-  Arm and X86 support.
 
-## 代码展示
-https://github.com/haha-stone/cnn
-## 使用说明
-1. 按注释修改CMakeLists.txt
+## Usage
+1. Modify CMakeLists.txt according to comments
 
 
 ![image.png](https://i.loli.net/2021/01/04/1X3RAOBag2utQ95.png)
 
 
-2. 输入path
+2. Input path
 
 
 ![image.png](https://i.loli.net/2021/01/04/HuYpAms6bRDiQtj.png)
  
-## 主要函数
+## Main Function
 ```
 void addzero(Matrix *matrix, int padding);
 void convolution(Matrix *matrix1, Matrix matrix2, Matrix *ans, int stride, float *bias, int anschannel);
 void maxpool(const Matrix *matrix1, int size, Matrix *ans);
 void Relu(Matrix *matrix);
 ```
-### convolution
-1. 转化为矩阵
+### Convolution Layer
+1. Transfer into Matrix
 ```
 #pragma omp parallel for schedule(dynamic)
   for (si = 0; si < matrix1->getSize() + 1 - matrix2.getSize(); si += stride) {
@@ -54,7 +50,7 @@ void Relu(Matrix *matrix);
     }
 
 ```
-2. 矩阵相乘并加上bias
+2. Multiply the Matrix and add bias.
 ```
     Matrix temp = matrix2 * (*matrix1);
     ans->setData(temp.getData());
@@ -66,8 +62,8 @@ void Relu(Matrix *matrix);
         }
     }
 ```
-### relu
-调换了i,j,k的次序
+### Relu
+Change the order of i,j,k
 ```
 #pragma omp parallel for schedule(dynamic)
     for (int k = 0; k < matrix->getSize(); k++) {
@@ -79,34 +75,31 @@ void Relu(Matrix *matrix);
         }
     }
 ```
-## 优化
-1. 在卷积运算中，将kernel视为一个窗口，该窗口每移动一次就会得到9个数与其相乘，将这九个数拉直为一行，并使用行主序，使得访问内存变快
+## Optimization
+- In the convolution operation, the kernel is regarded as a window. Every time the window is moved, nine numbers are multiplied by it, and the nine numbers are straightened into one row, and the row-major order is used to make access to memory faster.
+- Optimize matrix multiplication by AVX, OMP, block（cache locality） (OMP basically does not work. It may be caused by the fact that the amount of data is too small)
 
-2. 使用矩阵乘法的优化，包括avx,omp,分块(omp基本没起到作用，怀疑是数据量太小)
 
-3. 各处循环i,j,k的顺序调换，尽量使得指针跳跃变小
+3. The order of loop i, j, k is reversed , so as to make the pointer jump as small as possible
 
-4. 变量使用指针传输
+4. Variables are transferred using pointers
 
-5. 编译器优化
-## 测试
+5. Optimized by compiler.
+## Evaluation
 ![face.jpg](https://i.loli.net/2021/01/04/hn2Ui3IqsltY1wg.jpg)
-1. 优化前
+1. Before optimization
 
 
 ![image.png](https://i.loli.net/2021/01/04/GuKNkaqDhUtWBjr.png)
-2. 优化后
+2. After optimization
 
 
 ![image.png](https://i.loli.net/2021/01/04/jYKeWiNaMq892T3.png)
-3.arm
+3.ARM
 
 
 ![fc2cd12b13b923f1ad05531e481fbf0.jpg](https://i.loli.net/2021/01/04/Ym8JQscDC3vFxRA.jpg)
-## 遇到的问题
-1. opencv的使用
 
-一开始是在mac上使用clion,由于openmp和avx需用gcc,而mac上编译opencv用的是clang不得不转到windows平台
 
 
 ## 结语
